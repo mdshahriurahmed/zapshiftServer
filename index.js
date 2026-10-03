@@ -1,12 +1,9 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import { MongoClient, ServerApiVersion, ObjectId } from 'mongodb';
-import crypto from 'crypto';
-import Stripe from 'stripe';
-
-dotenv.config();
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const express = require('express')
+const cors = require('cors');
+require('dotenv').config();
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const crypto = require("crypto");
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -16,9 +13,15 @@ app.use(express.json());
 app.use(cors());
 
 // MongoDB
-const client = new MongoClient(
-    `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@dedzeqe.mongodb.net/?appName=Cluster0`
-);
+
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@dedzeqe.mongodb.net/?appName=Cluster0`;
+const client = new MongoClient(uri, {
+    serverApi: {
+        version: ServerApiVersion.v1,
+        strict: true,
+        deprecationErrors: true
+    }
+});
 
 function generateTrackingId() {
     const prefix = "PRCL";
@@ -28,21 +31,18 @@ function generateTrackingId() {
     return `${prefix}-${date}-${random}`;
 }
 
-export async function connectToMongoDB() {
+async function run() {
     try {
-        await client.connect();
+        // Connect the client to the server	(optional starting in v4.7)
+        client.connect();
 
         const db = client.db('zap_shift_db');
-
         const userCollection = db.collection('users');
         const parcelsCollection = db.collection('parcels');
         const paymentCollection = db.collection('payments');
         const ridersCollection = db.collection('riders');
         const trackingsCollection = db.collection('trackings');
-
         console.log("You successfully connected to MongoDB!");
-
-        // =========================
         // TRACKING FUNCTION
         // =========================
 
@@ -56,7 +56,6 @@ export async function connectToMongoDB() {
 
             return await trackingsCollection.insertOne(log);
         };
-
 
         // =========================
         // USERS
@@ -1343,38 +1342,23 @@ export async function connectToMongoDB() {
             }
         );
 
-
-        return client;
-
-    } catch (err) {
-
-        console.dir(err);
+        // Send a ping to confirm a successful connection
+        // await client.db("admin").command({ ping: 1 });
+        // console.log("Pinged your deployment. You successfully connected to MongoDB!");
+    } finally {
+        // Ensures that the client will close when you finish/error
+        // await client.close();
     }
 }
 
 
-// Disconnect MongoDB
-export async function disconnectFromMongoDB() {
+run().catch(console.dir);
 
-    await client.close();
-}
-
-
-// Root
 app.get('/', (req, res) => {
+    res.send('zap is shifting shifting!')
+})
 
-    res.send(
-        'zap is shifting shifting!'
-    );
-});
-
-
-// Start server
 app.listen(port, () => {
+    console.log(`Example app listening on port ${port}`)
+})
 
-    console.log(
-        `Example app listening on port ${port}`
-    );
-
-    connectToMongoDB();
-});
